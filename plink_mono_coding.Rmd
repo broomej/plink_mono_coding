@@ -1,0 +1,68 @@
+---
+title: How does PLINK encode monomorphic SNPs when converting from plain text to
+    binary formats?
+author: "Jai Broome"
+date: "`r Sys.Date()`"
+output:
+    html_document:
+        keep_md: true
+        code_folding: hide
+---
+
+[PLINK](https://www.cog-genomics.org/plink/) is a popular tool for analysis,
+manipulation and summarization of genetic data.
+There are two main data formats: plain text and binary. The plain text format uses a
+combination of two files: a `.map` file with
+[variant information](https://www.cog-genomics.org/plink/1.9/formats#map),
+and a `.ped` file with
+[pedigree information and genotype calls](https://www.cog-genomics.org/plink/1.9/formats#ped).
+While PLINK requires each variant to be biallelic, the `.map` file does not specify
+what the valid alleles are; this information is just in the `.ped` file. I had a
+question about how PLINK handles the conversion of monomorphic SNPs, but couldn't
+find it in the documentation. Specifically, when converting to binary format,
+a `.bim` file with variant-level information contains the allele 1 and allele 2
+codes, and I want to know how allele 1 and allele 2 get coded when there is only
+one allele present in your dataset.
+
+If we make a toy example where the `.map` file looks like this:
+
+```{bash}
+mkdir tmp
+echo "1	rs123	0	1000
+1	rs456	0	2000
+1	rs789	0	3000
+" > tmp/demo.map
+cat tmp/demo.map
+```
+and the `.ped` file looks like this:
+
+```{bash}
+echo "1 1 0 0 0 0 A A G G C C
+1 2 0 0 0 0 G A G G C C
+1 3 0 0 0 0 A A G G C C
+" > tmp/demo.ped
+cat tmp/demo.ped
+```
+we have data on three samples with genotyping at three sites (the rows in the
+`.map` file correspond to pairs of columns starting at column 7 in the `.ped`
+file). If you look closely, you'll see that SNPs rs456 and rs789 are monomorphic;
+that is, columns 9 and 10 are all `G` and columns 11 and 12 are all `C`.
+
+Using `plink --make-bed`, we convert this to binary format.
+
+```{bash}
+plink --file tmp/demo --out tmp/demo --make-bed
+```
+
+The `.bim` file contains our variant level information, and we can see that our
+monomorphic SNPs have allele 1 encoded as 0 or missing:
+
+```{bash}
+cat tmp/demo.bim
+```
+
+```{bash}
+rm -r tmp
+```
+
+Note: see a version of this and the source files on [Github](https://github.com/broomej/plink_mono_coding)
